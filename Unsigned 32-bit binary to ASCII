@@ -56,8 +56,8 @@ utoa3:
 utoa4:
     rol 0,x         ; when inner loop is done,
     rol 1,x         ;   argument /= 10 ...
-    rol 2,x
-    rol 3,x
+    rol 2,x         ; (comment these two ROLs
+    rol 3,x         ;  out for 16-bit goodness)
     rol             ;   ... and A = remainder
     dey
     bne utoa3       ; loop until done dividing
