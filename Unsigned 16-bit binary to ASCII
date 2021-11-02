@@ -1,0 +1,86 @@
+    .opt  Proc6502
+;=====================================================;
+; Output a 16-bit unsigned integer as ASCII
+; By Michael T Barry
+;   (V flag trick courtesy of John Brooks)
+; Entry: register X points to the first byte of the
+;          little-endian integer
+;        register Y is the minimum output field width
+;          (output is left-padded as necessary)
+;        register A contains the ASCII pad character
+width    = $3e
+padc     = $3f
+test     = $fc00    ; cold entry point
+io_area  = $f000    ; configure simulator terminal I/O
+acia_tx  = io_area+1  ; acia tx data register
+;=====================================================;
+    .org test
+; Do some preliminary housekeeping
+    ldx #$ff
+    txs
+    cld
+    ldx #$40
+; Print out a couple of test cases
+    lda #0
+    sta $40
+    sta $41
+    sta $42
+    sta $43
+    ldy #5
+    lda #','
+    jsr utoa        ; first test output
+    lda #13
+    sta $40
+    sta $41
+    sta $42
+    sta $43
+    ldy #10
+    lda #'.'
+    jsr utoa        ; second test output
+    brk             ; back to debugger
+utoa:
+    sta padc        ; save pad char
+    dey             ; width must be < 129
+    sty width       ; ideally a ZP byte
+    lda #0          ; stack sentinel
+    pha             ; push sentinel
+utoa2:
+    lda #0          ; init remainder
+    clv             ; init "not done" flag
+    ldy #32         ; bit width of argument
+utoa3:
+    cmp #10/2       ; divide argument by 10
+    bcc utoa4
+    sbc #10/2+128   ; set "not done" flag for
+    sec             ;   quotient > 0
+utoa4:
+    rol 0,x         ; when inner loop is done,
+    rol 1,x         ;   argument /= 10 ...
+    rol 2,x
+    rol 3,x
+    rol             ;   ... and A = remainder
+    dey
+    bne utoa3       ; loop until done dividing
+    ora #'0'        ; xlate remainder to ASCII
+    .db $cd         ; naked cmp abs opcode
+utoapad:
+    lda padc        ; pad char
+    pha             ; push digit or pad char
+    dec width       ; update output char count
+    bvs utoa2       ; loop until quotient == 0
+    bpl utoapad     ; pad any remaining width
+    pla
+utoaout:
+    jsr outch       ; output reversed digits
+    pla
+    bne utoaout     ; until sentinel is popped
+    rts
+outch:
+    sta  acia_tx    ; emit char via transmit register
+    rts
+;-----------------------------------------------------;
+    .end test       ; set start address
+
+Output:
+
+,,,,0.218959117
