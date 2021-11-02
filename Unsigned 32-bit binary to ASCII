@@ -1,6 +1,6 @@
     .opt  Proc6502
 ;=====================================================;
-; Output a 16-bit unsigned integer as ASCII
+; Output a 32-bit unsigned integer as ASCII
 ; By Michael T Barry
 ;   (V flag trick courtesy of John Brooks)
 ; Entry: register X points to the first byte of the
