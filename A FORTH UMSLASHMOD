@@ -1,0 +1,45 @@
+;------------------------------------------------------
+; A FORTH UM/MOD for any 6502 by Michael T. Barry.
+                    ;
+; ( ud u1 -- u2 u3 )
+; ud is the 32-bit dividend.
+; u1 is the 16-bit divisor.
+; u2 is the 16-bit remainder.
+; u3 is the 16-bit quotient.
+; All values are unsigned.
+                    ;
+; Invalid results for quotient overflow or /0
+                    ;
+; 0,x and 1,x are TOS  ( divisor -- quotient )
+; 2,x and 3,x are NOS  ( dividend:H -- remainder )
+; 4,x and 5,x are 3OS  ( dividend:L --  )
+                    ;
+umslashmod:         ;
+    ldy #16         ; loop counter
+umsm2:              ;
+    asl 4,x         ; dividend:L is gradually replaced
+    rol 5,x         ;   with the quotient
+    rol 2,x         ; dividend:H is gradually replaced
+    rol 3,x         ;   with the remainder
+    bcs umsm3       ;
+    lda 2,x         ;
+    cmp 0,x         ; compare remainder to divisor
+    lda 3,x         ;
+    sbc 1,x         ;
+    bcc umsm4       ;
+umsm3:              ;
+    lda 2,x         ;
+    sbc 0,x         ; if (remainder >= divisor) then
+    sta 2,x         ;   update partial remainder
+    lda 3,x         ;
+    sbc 1,x         ;
+    sta 3,x         ;
+    inc 4,x         ;   and set low bit in quotient
+umsm4:              ;
+    dey             ;
+    bne umsm2       ; Loop until done
+    inx             ; Exit sequence:
+    inx             ;   DROP the divisor
+    jmp SWAP        ;   SWAP quotient and remainder
+                    ; (SWAP's machine code, not its CFA)
+;------------------- 44 bytes, not counting HEADER
