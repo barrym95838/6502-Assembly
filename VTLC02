@@ -1015,13 +1015,13 @@ inkey:
 inkeyr:
     rts             ;
 ;-----------------------------------------------------;
-; Wait for key from stdin into a, echo to stdout, (cs)
+; Wait for key from I/O window into a and echo
 ; Drop stack and abort to "OK" prompt if ctrl-C
 ; 3 bytes
 inch:
-    jsr  waitkey    ; wait for keypress, echo
+    jsr  waitkey    ; wait for keypress, fall through
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - ;
-; Print ASCII char in a to stdout, (cs)
+; Print ASCII char in a to I/O window
 ; 16 bytes
 outch:
     cmp  #CR        ;
