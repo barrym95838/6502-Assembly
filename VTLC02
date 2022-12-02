@@ -11,6 +11,14 @@
 ;      Revision C02 (c) 2022, Michael T. Barry
 ;               All rights reserved.
 ;
+; VTLC02 is a ligntweight "self-contained" IDE, and
+;   features a command line, program editor and
+;   language interpreter, all in 970 bytes of dense
+;   65C02 machine code.  The "only" thing missing is
+;   a method to save your program, but this Kowalski
+;   version assumes that you will be pasting code
+;   from the simulator host.
+;
 ; Redistribution and use in source and binary forms,
 ;   with or without modification, are permitted,
 ;   provided that the following conditions are met: 
