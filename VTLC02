@@ -14,7 +14,7 @@
 ;
 ; VTLC02 is a ligntweight "self-contained" IDE, and
 ;   features a command line, program editor and
-;   language interpreter, all in 967 bytes of dense
+;   language interpreter, all in 966 bytes of dense
 ;   65C02 machine code.  The "only" thing missing is a
 ;   secondary storage facility for your programs, but
 ;   this Kowalski version assumes that you will be
@@ -262,13 +262,13 @@ user:
 ; entry:  Carry must be clear
 ; uses:   findln:, outch:, prnum:, prstr:, {@ (}
 ; exit:   to command line via findln:
-; 18 bytes
+; 17 bytes
 list_:
     jsr  findln     ; find program line >= {#}
     ldx  #lparen    ; line number for prnum
     jsr  prnum      ; print the line number
+    tax             ; \0 for delimiter
     lda  #' '       ; subst ' ' for line length byte
-    ldx  #0         ; \0 for delimiter
     jsr  prstr1     ; print the rest of the line
     sec             ; prepare for next line
     bra  list_      ;
