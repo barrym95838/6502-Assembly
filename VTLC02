@@ -1,4 +1,5 @@
 ;234567890123456789012345678901234567890123456789012345
+    .opt Proc65c02
 ;-----------------------------------------------------;
 ;             VTL-2 for the 65C02 (VTLC02)            ;
 ;           Original Altair 680b version by           ;
@@ -13,11 +14,11 @@
 ;
 ; VTLC02 is a ligntweight "self-contained" IDE, and
 ;   features a command line, program editor and
-;   language interpreter, all in 970 bytes of dense
-;   65C02 machine code.  The "only" thing missing is
-;   a method to save your program, but this Kowalski
-;   version assumes that you will be pasting code
-;   from the simulator host.
+;   language interpreter, all in 967 bytes of dense
+;   65C02 machine code.  The "only" thing missing is a
+;   secondary storage facility for your programs, but
+;   this Kowalski version assumes that you will be
+;   copying/pasting code from the simulator host.
 ;
 ; Redistribution and use in source and binary forms,
 ;   with or without modification, are permitted,
@@ -261,15 +262,14 @@ user:
 ; entry:  Carry must be clear
 ; uses:   findln:, outch:, prnum:, prstr:, {@ (}
 ; exit:   to command line via findln:
-; 21 bytes
+; 18 bytes
 list_:
     jsr  findln     ; find program line >= {#}
     ldx  #lparen    ; line number for prnum
     jsr  prnum      ; print the line number
-    lda  #' '       ; print a space instead of the
-    jsr  outch      ;   line length byte
-    ldx  #0         ; zero for delimiter
-    jsr  prstr      ; print the rest of the line
+    lda  #' '       ; subst ' ' for line length byte
+    ldx  #0         ; \0 for delimiter
+    jsr  prstr1     ; print the rest of the line
     sec             ; prepare for next line
     bra  list_      ;
 ;-----------------------------------------------------;
@@ -427,6 +427,7 @@ prstr:
     beq  prstr2     ;   yes: finish up
     lda  (at),y     ;
     beq  prstr2     ;
+prstr1:
     jsr  outch      ;   no: print char to terminal
     bra  prstr      ;     and loop
 prstr2:
@@ -1030,7 +1031,7 @@ inch:
     jsr  waitkey    ; wait for keypress, fall through
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - ;
 ; Print ASCII char in a to I/O window
-; 16 bytes
+; 15 bytes
 outch:
     cmp  #CR        ;
     bne  not_cr     ;
