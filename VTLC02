@@ -14,7 +14,7 @@
 ;
 ; VTLC02 is a ligntweight "self-contained" IDE, and
 ;   features a command line, program editor and
-;   language interpreter, all in 966 bytes of dense
+;   language interpreter, all in 963 bytes of dense
 ;   65C02 machine code.  The "only" thing missing is a
 ;   secondary storage facility for your programs, but
 ;   this Kowalski version assumes that you will be
@@ -889,29 +889,28 @@ cvbin3:
 ;-----------------------------------------------------;
 ; Accept input line from user and store it in linbuf,
 ;   zero-terminated (allows very primitive edit/cancel)
-; entry:   (jsr to inln or newln, not inln6)
 ; used by: user:, getval:
 ; uses:    inch:, outnl:, linbuf, {@}
 ; exit:    @[y] -> linbuf
-; 42 bytes
-inln6:
-    cmp  #ESC       ; escape?
-    beq  newln      ;   yes: discard entire line
-    iny             ; line limit exceeded?
-    bpl  inln2      ;   no: keep going
+; 41 bytes
 newln:
-    jsr  outnl      ;   yes: discard entire line
+    jsr  outnl      ; start on a fresh line
 inln:
-    lda  #<linbuf   ; entry point: start a fresh line
+    lda  #<linbuf   ; start on current line
     sta  at         ; {@} -> input line buffer
     lda  #>linbuf   ;
     sta  at+1       ;
-    ldy  #1         ;
+    ldy  #-1        ;
+inln6:
+    iny             ;
+    iny             ;
 inln5:
-    dey             ;
-    bmi  newln      ;
+    dey             ; buffer over/underflow?
+    bmi  newln      ;   yes: start over
 inln2:
     jsr  inch       ; get (and echo) one keypress
+    cmp  #ESC       ; escape?
+    beq  newln      ;   yes: discard entire line
     cmp  #BS        ; backspace?
     beq  inln5      ;   yes: delete previous char
     cmp  #CR        ; enter?
@@ -1031,15 +1030,16 @@ inch:
     jsr  waitkey    ; wait for keypress, fall through
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - ;
 ; Print ASCII char in a to I/O window
-; 15 bytes
+; 13 bytes
 outch:
-    cmp  #CR        ;
-    bne  not_cr     ;
+    pha             ;
+    .db  $cd        ; "cmp abs" naked op-code
+outch2:
     lda  #LF        ; add LF to CR (Kowalski)
-    sta  acia_tx    ; emit LF via transmit register
-    lda  #CR        ;
-not_cr:
     sta  acia_tx    ; emit char via transmit register
+    cmp  #CR        ;
+    beq  outch2     ;
+    pla             ;
     rts             ;
 ;-----------------------------------------------------;
 ; "\nOK\n" prompt
