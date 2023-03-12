@@ -14,7 +14,7 @@
 ;
 ; VTLC02 is a ligntweight "self-contained" IDE, and
 ;   features a command line, program editor and
-;   language interpreter, all in 963 bytes of dense
+;   language interpreter, all in 962 bytes of dense
 ;   65C02 machine code.  The "only" thing missing is a
 ;   secondary storage facility for your programs, but
 ;   this Kowalski version assumes that you will be
@@ -1023,21 +1023,20 @@ inkey:
 inkeyr:
     rts             ;
 ;-----------------------------------------------------;
-; Wait for key from I/O window into a and echo
-; Drop stack and abort to "OK" prompt if ctrl-C
+; Wait for a key from I/O window, put it into a, echo
+; Drop the stack and abort to "OK" prompt if ctrl-C
 ; 3 bytes
 inch:
     jsr  waitkey    ; wait for keypress, fall through
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - ;
 ; Print ASCII char in a to I/O window
-; 13 bytes
+; 12 bytes
 outch:
     pha             ;
-    .db  $cd        ; "cmp abs" naked op-code
 outch2:
-    lda  #LF        ; add LF to CR (Kowalski)
     sta  acia_tx    ; emit char via transmit register
-    cmp  #CR        ;
+    eor  #LF^CR     ;
+    cmp  #LF        ; add LF to CR (Kowalski)
     beq  outch2     ;
     pla             ;
     rts             ;
