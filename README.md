@@ -7,4 +7,6 @@ This collection spans many years, and many different assemblers.  I will attempt
 
 This is my first attempt at creating a repository, so there will be a learning curve, with associated delays.  I can almost guarantee that mistakes will be made, so please bear with me.  Also, please don't hesitate to ask any questions or provide any critiques and comments, constructive or otherwise.  I can be reached privately by appending @yahoo.com to my user name.
 
+Thank you so much for visiting.
+
 Michael T Barry
