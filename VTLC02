@@ -118,7 +118,7 @@
 ; * Bit-wise operators & | ^ (and, or, xor)
 ;   Example:  A=$|128) Get a char and set hi-bit
 ;
-; * Absolute addressed 8-bit memory load and store
+; * Absolute addressed 8-bit memory "PEEK" and "POKE"
 ;   via the {< @} facility:
 ;   Example:  <=P) Point to the I/O port at P
 ;             @=@&254^128) Clear bit 0 & flip bit 7
@@ -1002,10 +1002,10 @@ istart:
 ; Kowalski simulator I/O subroutines, with thanks to
 ;   the efforts of Klaus2m5
 ;-----------------------------------------------------;
-; Check for user keypress and return if none has
+; Check for a user keypress and return if none has
 ;   arrived.  Otherwise, pause for another keypress
-;   before returning.  If either key is ctrl-C then
-;   drop the stack and restart the "OK" prompt.
+;   before returning.  If continuation key is ctrl-C
+;   then drop the stack and restart the "OK" prompt.
 ; 23 bytes
 pause:
     jsr  inkey      ;
