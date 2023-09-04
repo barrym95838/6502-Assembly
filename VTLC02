@@ -14,7 +14,7 @@
 ;
 ; VTLC02 is a ligntweight "self-contained" IDE, and
 ;   features a command line, program editor and
-;   language interpreter, all in 962 bytes of dense
+;   language interpreter, all in 957 bytes of dense
 ;   65C02 machine code.  The "only" thing missing is a
 ;   secondary storage facility for your programs, but
 ;   this Kowalski version assumes that you will be
@@ -104,7 +104,7 @@
 ;     bit quantities, but the overall performance is
 ;     better due to the 65c02's lower average clocks/
 ;     instruction ratio, and optimizations not present
-;     in the original verison.
+;     in the original version.
 ; * VTLC02 is my free gift (?) to the world.  It may be
 ;     freely copied, shared, and/or modified by anyone
 ;     interested in doing so, with only the stipulation
@@ -176,10 +176,10 @@ at       = $80      ; {@}* internal pointer / mem byte
 ;          $c0      ; { }  starting with VTL02B, the
 ;                       space character is no longer a
 ;                       valid user variable nor binary
-;                       operator; it's been demoted to
-;                       a numeric constant terminator
-;                       and as a place-holder in
-;                       strings and program listings.
+;                       operator; it is demoted to a
+;                       numeric constant terminator and
+;                       as a place-holder in strings
+;                       and program listings.
 bang     = $c2      ; {!}  return line number
 quote    = $c4      ; {"}  user ml subroutine vector
 pound    = $c6      ; {#}  current line number
@@ -188,7 +188,7 @@ remn     = $ca      ; {%}  remainder of last division
 ampr     = $cc      ; {&}  pointer to start of array
 tick     = $ce      ; {'}  pseudo-random number
 lparen   = $d0      ; {(}* old line # / begin sub-exp
-rparen   = $d2      ; {)}  end sub-exp / start comment
+;          $d2      ; {)}  end sub-exp / start comment
 star     = $d4      ; {*}  pointer to end of free mem
 ;          $d6      ; {+ , - . /}  valid user variables
 ; Interpreter argument stack space
@@ -196,7 +196,7 @@ arg      = $e0      ; {0 1 2 3 4 5 6 7 8 9 :}*
 ; Rarely used variables and argument stack overflow
 ;          $f6      ; {;}  valid user variable
 lthan    = $f8      ; {<}* byte pointer for peek/poke
-;        = $fa      ; {=}* valid user variable
+;          $fa      ; {=}  valid user variable
 gthan    = $fc      ; {>}* temp / call ML subroutine
 ques     = $fe      ; {?}* temp / terminal I/O
 ;
@@ -307,13 +307,30 @@ direct:
     ora  pound+1    ; if program mode then continue
     bcc  progr      ; if direct mode, did {#} change?
     beq  start      ;   no: restart "OK" prompt
-    bne  eloop0     ;   yes: execute program from {#}
+    bra  eloop0     ;   yes: execute program from {#}
+;-----------------------------------------------------;
+; Point @[y] to the first/next program line >= {#}
+; entry:   (cc): start search at beginning of program
+;          (cs): start search at next line
+;                ({@} -> beginning of current line)
+; used by: list_:, progr:
+; uses:    find:, prgm, {@ # & (}
+; exit:    if line not found then abort to "OK" prompt
+;          else {@} -> found line, x:a = {#} = {(} =
+;            actual line number, y = 2, (cc)
+; 10 bytes
+findln:
+    jsr  find       ; find first/next line >= {#}
+    bcs  start      ; if end then restart "OK" prompt
+    sta  pound      ; {#} = {(}
+    stx  pound+1    ;
+    rts             ;
 ;-----------------------------------------------------;
 ; Delete/insert/replace program line and restart the
 ;   command prompt (no "OK" means success)
 ; entry:  Carry must be clear
 ; uses:   find:, start:, linbuf, {@ > # & * (}
-; 147 bytes
+; 146 bytes
 edit:
     phy             ; save linbuf offset pointer
     jsr  find       ; point {@} to first line >= {#}
@@ -324,7 +341,7 @@ edit:
     bne  insrt      ;
     lda  (at),y     ;
     tay             ; y = length of line to delete
-    eor  #-1        ;
+    eor  #255       ; (-1)
     adc  ampr       ; {&} = {&} - y
     sta  ampr       ;
     bcs  delt       ;
@@ -356,7 +373,7 @@ insrt:
 cntln:
     inx             ;
     iny             ; determine new line length in y
-    lda  linbuf-1,x ;   and push statement string on
+    lda  linbuf-1,x ;   and push statement text on
     pha             ;   the system stack
     bne  cntln      ;
     cpy  #4         ; if empty line then skip the
@@ -379,23 +396,23 @@ slide:
     bne  slide2     ;
     dec  ampr+1     ;
 slide2:
-    dec  ampr       ;
-    lda  ampr       ;
+    dea             ;
+    sta  ampr       ;
     cmp  at         ;
     lda  ampr+1     ;
     sbc  at+1       ;
     bcc  move2      ; slide open a gap inside the
-    lda  (ampr)     ;   program just big enough to
-    sta  (ampr),y   ;   hold the new line
+    lda  (ampr)     ;   program text just big enough
+    sta  (ampr),y   ;   to hold the new line
     bra  slide      ;
 move2:
-    pla             ; pull the statement string and
-    dey             ;   the new line number and store
-    sta  (at),y     ;   them in the program gap
+    pla             ; pull the statement text and the
+    dey             ;   new line number and store them
+    sta  (at),y     ;   in the program text gap
     bne  move2      ;
     ldy  #2         ;
-    txa             ;
-    sta  (at),y     ; store length after line number
+    txa             ; store line length at offset 2,
+    sta  (at),y     ;   after line number
     lda  gthan      ;
     sta  ampr       ; {&} = {>}
     lda  gthan+1    ;
@@ -439,7 +456,7 @@ prstr2:
     cmp  #';'       ; if trailing char is ';' then
     beq  execrts    ;   suppress the '\n'
 outnl:
-    lda  #CR        ; \n to terminal
+    lda  #CR        ; '\n' to terminal
 joutch:
     jmp  outch      ;
 ;-----------------------------------------------------;
@@ -480,7 +497,7 @@ exec:
     cpx  #ques      ; if {?=...} statement then print
     beq  prnum0     ;   arg[{1}] as unsigned decimal
     cpx  #gthan     ; if {>=...} statement then call
-    beq  usr        ;   user-defined ml routine
+    beq  usr        ;   user-defined ML routine
 exec3:
     sta  (arg)      ;
     adc  tick+1     ; store arg[{1}] in the left-side
@@ -496,7 +513,7 @@ exec3:
 execrts:
     rts             ;
 usr:
-    tax             ; jump to user ml routine with
+    tax             ; jump to user ML routine with
     lda  arg+3      ;   arg[{1}] in a:x (MSB:LSB)
     jmp  (quote)    ; {"} must point to valid 6502 code
 poke:
@@ -584,31 +601,11 @@ getval:
     jsr  getbyte    ;
     iny             ;
     cmp  #'?'       ; user line input?
-    bne  getval2    ;
-    phy             ;   yes:
-    lda  at         ;     save @[y]
-    pha             ;     (current expression ptr)
-    lda  at+1       ;
-    pha             ;
-    jsr  inln       ; input expression from user
-    jsr  eval       ; evaluate, var[x] = result
-    pla             ;
-    sta  at+1       ;
-    pla             ;
-    sta  at         ; restore @[y]
-    ply             ;
-    rts             ; skip over "?" and return
-getval2:
+    beq  getexp     ;
     cmp  #'$'       ; user char input?
-    bne  getval2a   ;
-    jsr  inch       ;   yes: input one char
-    bra  getval5    ;
-getval2a:
+    beq  getch      ;
     cmp  #'@'       ; memory access?
-    bne  getval3    ;
-    lda  (lthan)    ; yes: peek memory byte at ({<})
-    bra  getval5    ;
-getval3:
+    beq  peek       ;
     cmp  #'('       ; sub-expression?
     beq  eval       ;   yes: evaluate it recursively
     jsr  convp      ;   no: first set var[x] to the
@@ -623,6 +620,26 @@ getval4:
     pla             ;
 getval5:
     sta  0,x        ; store low-byte of term value
+    rts             ;
+peek:
+    lda  (lthan)    ; peek memory byte at ({<})
+    bra  getval5    ; (cvbin cleared high-byte)
+getch:
+    jsr  inch       ; input one char from user
+    bra  getval5    ; (cvbin cleared high-byte)
+getexp:
+    phy             ;
+    lda  at         ; save @[y]
+    pha             ; (current expression ptr)
+    lda  at+1       ;
+    pha             ;
+    jsr  inln       ; input expression from user
+    jsr  eval       ; evaluate, var[x] = result
+    pla             ;
+    sta  at+1       ;
+    pla             ;
+    sta  at         ; restore @[y]
+    ply             ;
 getrts:
     rts             ;
 ;-----------------------------------------------------;
@@ -663,27 +680,28 @@ mulrts:
 ; exit:    (eq): var[x] -> variable, @[y] unchanged
 ;          (ne): var[x] -> array element,
 ;                @[y] -> following text
-; 19 bytes
+; 18 bytes
 convp:
     cmp  #':'       ; array element?
     bne  simple     ;   no: simple variable
     jsr  eval       ;   yes: evaluate array index at
     asl  0,x        ;     @[y] and advance y
-    rol  1,x        ;
-    lda  ampr       ;   var[x] -> array element
-    sta  2,x        ;     at address 2*index+&
-    lda  ampr+1     ;
-    sta  3,x        ;
+    rol  1,x        ;     var[x] -> array element
+    lda  ampr+1     ;       at address 2 * index + {&}
+    sta  3,x        ;       (mod 65536 with no bounds
+    lda  ampr       ;       checking whatsoever)
+    .db  $cd        ; "cmp abs" naked op-code
 ; - - - - - - - - - - - - - - - - - - - - - - - - - - ;
 ; var[x] += var[x+2]
 ; 14 bytes
 plus:
+    lda  2,x        ;
+plus1:              ; (called by cvbin:)
     clc             ;
-    lda  0,x        ;
-    adc  2,x        ;
+    adc  0,x        ;
     sta  0,x        ;
-    lda  1,x        ;
-    adc  3,x        ;
+    lda  3,x        ;
+    adc  1,x        ;
 plus2:
     sta  1,x        ;
     rts             ;
@@ -720,10 +738,10 @@ simple:
 ;   the three comparison operators
 ; 37 bytes
 oper:
-    cmp  #'+'       ; addition operator?
-    beq  plus       ;
     cmp  #'*'       ; multiplication operator?
     beq  mul        ;
+    cmp  #'+'       ; addition operator?
+    beq  plus       ;
     cmp  #'/'       ; division operator?
     beq  div        ;
     cmp  #'['       ; "then" operator?
@@ -819,8 +837,8 @@ else_:
     stz  0,x        ;
     bra  oper8e     ;
 ;-----------------------------------------------------;
-; var[x] = var[x]/var[x+2] (unsigned), {%} = remainder
-;   var[x] /= 0 produces {%} = var[x], var[x] = 65535
+; var[x] /= var[x+2] (unsigned), {%} = remainder
+; var[x+2] of 0 produces {%} = var[x], var[x] = 65535
 ; 39 bytes                                            ;
 div:
     phy             ;
@@ -857,11 +875,11 @@ div3:
 ;            any spaces encountered after a conversion
 ;            has begun will end the conversion.
 ; used by: user:, getval:
-; uses:    mul:, plus:, var[x], var[x+2], {@ > ?}
+; uses:    mul:, plus0:, var[x], var[x+2], {@ > ?}
 ; exit:    (ne): var[x] = constant, @[y] -> next text
 ;          (eq): var[x] = 0, @[y] unchanged
 ;          (cs): in all but the truly strangest cases
-; 41 bytes
+; 39 bytes
 cvbin:
     stz  0,x        ; var[x] = 0
     stz  1,x        ;
@@ -876,8 +894,7 @@ cvbin2:
     jsr  mul        ; var[x] *= 10
     stz  3,x        ;
     pla             ; retrieve decimal digit
-    sta  2,x        ;
-    jsr  plus       ; var[x] += digit
+    jsr  plus1      ; var[x] += digit
     iny             ;
     lda  (at),y     ; grab next char
 cvbin3:
@@ -980,48 +997,30 @@ find6:
 findrts:
     rts             ;
 ;-----------------------------------------------------;
-; Point @[y] to the first/next program line >= {#}
-; entry:   (cc): start search at beginning of program
-;          (cs): start search at next line
-;                ({@} -> beginning of current line)
-; used by: list_:, progr:
-; uses:    find:, prgm, {@ # & (}
-; exit:    if line not found then abort to "OK" prompt
-;          else {@} -> found line, x:a = {#} = {(} =
-;            actual line number, y = 2, (cc)
-; 13 bytes
-findln:
-    jsr  find       ; find first/next line >= {#}
-    bcs  istart     ; if end then restart "OK" prompt
-    sta  pound      ; {#} = {(}
-    stx  pound+1    ;
-    rts             ;
-istart:
-    jmp  start      ; drop stack, restart "OK" prompt
-;-----------------------------------------------------;
 ; Kowalski simulator I/O subroutines, with thanks to
 ;   the efforts of Klaus2m5
 ;-----------------------------------------------------;
-; Check for a user keypress and return if none has
+; Check for user keypress and return if none has
 ;   arrived.  Otherwise, pause for another keypress
-;   before returning.  If continuation key is ctrl-C
-;   then drop the stack and restart the "OK" prompt.
-; 23 bytes
+;   before returning.  If either key is ctrl-C then
+;   drop the stack and restart the "OK" prompt.
+; 25 bytes
 pause:
     jsr  inkey      ;
     beq  inkeyr     ; return if no keypress
 waitkey:
     jsr  inkey      ;
     beq  waitkey    ; wait for a keypress
-    rts             ; return with it in a
+chklf:
+    cmp  #LF        ; ignore LF (Kowalski)
+inkeyr:
+    rts             ; return with key in a
 inkey:
     lda  acia_rx    ; has a keypress arrived?
     beq  inkeyr     ;   no: return immediately
     cmp  #3         ; ctrl-C?
-    beq  istart     ;   yes: abort to "OK" prompt
-    cmp  #LF        ; ignore LF (Kowalski)
-inkeyr:
-    rts             ;
+    bne  chklf      ;   no: return to caller
+    jmp  start      ; drop stack, restart "OK" prompt
 ;-----------------------------------------------------;
 ; Wait for a key from I/O window, put it into a, echo
 ; Drop the stack and abort to "OK" prompt if ctrl-C
